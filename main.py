@@ -56,9 +56,11 @@ metric = st.selectbox("Select the performance metric:", ["RMSE", "MAE", "MSE"])
 if st.button("Update Map"):
     m = folium.Map(location=[16.9310, 80.1000], zoom_start=10)
     for idx, row in df_map.iterrows():
-        tooltip_text = f"WQI: {row['WQI']}<br>ph: {row['ph']}<br>Conductivity: {row['conductivity']}<br>BOD: {row['bod']}<br>Nitrate: {row['nitrate']}<br>Turbidity: {row['turbidity']}<br>TDS: {row['TDS']}"
+        tooltip_text = f"WQI: {row['WQI']}<br>ph: {row['ph']}<br>conductivity: {row['conductivity']}<br>bod: {row['bod']}<br>nitrate: {row['nitrate']}<br>turbidity: {row['turbidity']}<br>TDS: {row['TDS']}"
         folium.Marker([row['lat'], row['lon']], tooltip=tooltip_text).add_to(m)
     folium_static(m)
+
+
 
 # Button to calculate WQI
 if st.button("Calculate WQI"):
@@ -86,8 +88,3 @@ if st.button("Calculate WQI"):
     # Option to download the output
     output_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
     st.download_button("Download Output File", data=pd.DataFrame.to_csv(output_df), file_name="wqi_output.csv", mime="text/csv")
-
-
-
-
-# streamlit run main.py
