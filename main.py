@@ -75,9 +75,7 @@ if st.button("Submit"):
         model = GradientBoostingRegressor()
     elif algorithm == "Decision Tree":
         model = DecisionTreeRegressor()
-    elif algorithm == "Convolutional Neural Network":
-        # Add CNN model code here
-        pass
+
 
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
