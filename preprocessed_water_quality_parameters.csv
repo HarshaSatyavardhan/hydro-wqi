@@ -1,0 +1,9 @@
+water quality parametrs,measured values,ideal values,standard values
+conductivity,350.0,0,300.0
+bod,4.0,8,6.0
+tds,334.0,0,500.0
+nitrades,47.0,0,45.0
+fluorides,10.2,0,1.0
+iron,0.2,0,0.3
+ph,6.2,7,8.5
+turbidity,2.0,0,5.0
