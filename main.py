@@ -29,12 +29,19 @@ def calculate_WQI(df):
 st.title("WQI Prediction")
 st.write("This tool estimates the Water Quality Index (WQI) using machine learning algorithms.")
 
+# Option for user to select input source
+option = st.selectbox("Select the source for observed WQI values:", ["Upload File", "Use Calculated WQI"])
+
 # Read the actual data
 df_wqi = pd.read_csv("preprocessed_hydro_data.csv")
 df_quality_params = pd.read_csv("preprocessed_water_quality_parameters.csv")
 
 # Calculate WQI for each record in df_wqi
-df_wqi['WQI'] = [calculate_WQI(df_quality_params) for _ in range(len(df_wqi))]
+if option == "Use Calculated WQI":
+    df_wqi['WQI'] = [calculate_WQI(df_quality_params) for _ in range(len(df_wqi))]
+elif option == "Upload File":
+    # Add file upload logic here
+    pass
 
 # Create DataFrame for map
 df_map = df_wqi.copy()
@@ -42,7 +49,7 @@ df_map['lat'] = 16.9310
 df_map['lon'] = 80.1000
 
 # Option to select ML algorithm
-algorithm = st.selectbox("Select the machine learning algorithm:", ["Gradient Boosting", "Decision Tree"])
+algorithm = st.selectbox("Select the machine learning algorithm:", ["Gradient Boosting", "Decision Tree", "Convolutional Neural Network"])
 
 # Option to select performance metric
 metric = st.selectbox("Select the performance metric:", ["RMSE", "MAE", "MSE"])
@@ -58,7 +65,7 @@ if st.button("Update Map"):
     folium_static(m)
 
 # Button to calculate WQI and train the model
-if st.button("Calculate and Train"):
+if st.button("Submit"):
     X = df_wqi.drop(columns=['WQI', 'Year', 'Month'])  # Drop columns not used in the model
     y = df_wqi['WQI']
     
@@ -68,6 +75,9 @@ if st.button("Calculate and Train"):
         model = GradientBoostingRegressor()
     elif algorithm == "Decision Tree":
         model = DecisionTreeRegressor()
+    elif algorithm == "Convolutional Neural Network":
+        # Add CNN model code here
+        pass
 
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
