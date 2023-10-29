@@ -81,6 +81,11 @@ if st.button("Calculate and Train"):
 
     st.write(f"The performance of the model ({algorithm}) based on {metric} is: {performance}")
 
-    # Option to download the output
-    output_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
-    st.download_button("Download Output File", data=pd.DataFrame.to_csv(output_df), file_name="wqi_output.csv", mime="text/csv")
+    # Convert NumPy array to DataFrame
+    output_df = pd.DataFrame({"Predicted WQI": y_pred})
+
+    # Convert DataFrame to CSV format
+    csv_data = output_df.to_csv(index=False)
+
+    # Download button
+    st.download_button("Download Output File", data=csv_data, file_name="predicted_wqi_output.csv", mime="text/csv")
