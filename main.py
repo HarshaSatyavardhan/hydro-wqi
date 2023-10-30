@@ -10,6 +10,11 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.model_selection import train_test_split
 import folium
 from streamlit_folium import folium_static
+# Function to normalize data
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+from sklearn.model_selection import GridSearchCV
+
 
 # Initialize session state variables if they don't exist
 if 'trained_model' not in st.session_state:
@@ -17,18 +22,20 @@ if 'trained_model' not in st.session_state:
 if 'train_columns' not in st.session_state:
     st.session_state.train_columns = None
 
-
 # Function to calculate WQI
-def calculate_WQI(df):
-    # Check if required columns exist in the DataFrame
-    required_columns = ['measured values', 'ideal values', 'standard values']
-    if not all(col in df.columns for col in required_columns):
-        return "Required columns are missing in the uploaded file."
+def calculate_WQI(row, df_quality_params):
+    if row.name >= len(df_quality_params):
+        return np.nan
+    quality_params_row = df_quality_params.iloc[row.name]
     
-    measured_values = df['measured values'].values
-    ideal_values = df['ideal values'].values
-    standard_values = df['standard values'].values
-
+    required_columns = ['measured values', 'ideal values', 'standard values']
+    if not all(col in quality_params_row.index for col in required_columns):
+        return np.nan
+    
+    measured_values = np.array(quality_params_row['measured values']).flatten()
+    ideal_values = np.array(quality_params_row['ideal values']).flatten()
+    standard_values = np.array(quality_params_row['standard values']).flatten()
+    
     qn_values = [((v_en - v_io) / (s_n - v_io)) * 100 if (s_n - v_io) != 0 else 0 for v_en, v_io, s_n in zip(measured_values, ideal_values, standard_values)]
     sum_sn = sum(standard_values)
     k = 1 / sum_sn if sum_sn != 0 else 0
@@ -36,6 +43,7 @@ def calculate_WQI(df):
     
     WQI = sum(qn * w for qn, w in zip(qn_values, w_values)) / sum(w_values) if sum(w_values) != 0 else 0
     return WQI
+
 
 # Title and introduction
 st.title("WQI Prediction")
@@ -46,7 +54,10 @@ df_wqi = pd.read_csv("preprocessed_hydro_data.csv")
 df_quality_params = pd.read_csv("preprocessed_water_quality_parameters.csv")
 
 # Calculate WQI for each record in df_wqi
-df_wqi['WQI'] = [calculate_WQI(df_quality_params) for _ in range(len(df_wqi))]
+df_wqi['WQI'] = df_wqi.apply(lambda row: calculate_WQI(row, df_quality_params), axis=1)
+
+# Remove rows where WQI is NaN
+df_wqi = df_wqi.dropna(subset=['WQI'])
 
 # Create DataFrame for map
 df_map = df_wqi.copy()
@@ -69,36 +80,52 @@ if st.button("Update Map"):
 
 # Button to train the model
 if st.button("Train Model"):
-    # Drop or encode non-numerical columns here, for example:
     if 'Month' in df_wqi.columns:
         df_wqi = pd.get_dummies(df_wqi, columns=['Month'], drop_first=True)
 
     X = df_wqi.drop(columns=['WQI'])
     y = df_wqi['WQI']
+    
+    # Keep track of column names before scaling
+    original_columns = X.columns.tolist()
+
+    # Normalize data
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
+
+    # Train-test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    model = None  # Initialize model to None
+    
     if algorithm == "Gradient Boosting":
+        # Extended the parameter grid
+        parameters = {
+            'n_estimators': [50, 100, 200],
+            'learning_rate': [0.001, 0.01, 0.1, 0.2],
+            'max_depth': [3, 4, 5, 6],
+            'min_samples_split': [2, 3, 4],
+            'min_samples_leaf': [1, 2, 3]
+        }
         model = GradientBoostingRegressor()
-    elif algorithm == "Decision Tree":
+        grid = GridSearchCV(model, parameters, cv=5, n_jobs=-1, verbose=2)
+        grid.fit(X_train, y_train)
+        model = grid.best_estimator_
+        st.write("Best Parameters:", grid.best_params_)
+    else:
         model = DecisionTreeRegressor()
+    
+    model.fit(X_train, y_train)
+    st.session_state.trained_model = model
+    st.session_state.train_columns = original_columns  # Use original_columns
 
-    if model is not None:  # Only proceed if a valid model is selected
-        model.fit(X_train, y_train)
-        st.session_state.trained_model = model  # Store the trained model
-        st.session_state.train_columns = X_train.columns  # Store the training columns
+    # Model evaluation
+    y_pred = model.predict(X_test)
+    performance = {
+        "RMSE": np.sqrt(mean_squared_error(y_test, y_pred)),
+        "MAE": mean_absolute_error(y_test, y_pred),
+        "MSE": mean_squared_error(y_test, y_pred)
+    }
+    st.write(f"The performance of the model based on {metric} is: {performance[metric]}")
 
-        y_pred = model.predict(X_test)
-        performance = None  # Initialize performance to None
-        if metric == "RMSE":
-            performance = np.sqrt(mean_squared_error(y_test, y_pred))
-        elif metric == "MAE":
-            performance = mean_absolute_error(y_test, y_pred)
-        elif metric == "MSE":
-            performance = mean_squared_error(y_test, y_pred)
-
-        if performance is not None:  # Only proceed if performance is calculated
-            st.write(f"The performance of the model based on {metric} is: {performance}")
 
 # File uploader for sample CSV
 uploaded_file = st.file_uploader("Upload your sample CSV file containing parameters", type=["csv"], key="unique_key_1")
