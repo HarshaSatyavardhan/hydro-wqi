@@ -70,11 +70,21 @@ algorithm = st.selectbox("Select the machine learning algorithm:", ["Gradient Bo
 # Option to select performance metric
 metric = st.selectbox("Select the performance metric:", ["RMSE", "MAE", "MSE"])
 
+# # Button to update map
+# if st.button("Update Map"):
+#     m = folium.Map(location=[16.9310, 80.1000], zoom_start=10)
+#     for idx, row in df_map.iterrows():
+#         tooltip_text = "WQI: {}".format(row.get('WQI', 'Not calculated'))
+#         folium.Marker([row['lat'], row['lon']], tooltip=tooltip_text).add_to(m)
+#     folium_static(m)
+
 # Button to update map
 if st.button("Update Map"):
     m = folium.Map(location=[16.9310, 80.1000], zoom_start=10)
     for idx, row in df_map.iterrows():
         tooltip_text = "WQI: {}".format(row.get('WQI', 'Not calculated'))
+        for param in ['pH', 'Conductivity (uS/cm)', 'BOD', 'Nitrates', 'Turbidity', 'TDS']:
+            tooltip_text += f"<br><b>{param}:</b> {row.get(param, 'N/A')}"  # Using get() to avoid KeyError
         folium.Marker([row['lat'], row['lon']], tooltip=tooltip_text).add_to(m)
     folium_static(m)
 
